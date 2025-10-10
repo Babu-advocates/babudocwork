@@ -8,7 +8,6 @@ import NotFound from "./pages/NotFound";
 import AdminTechverse from "./pages/AdminTechverse";
 import Auth from "./pages/Auth";
 import Templates from "./pages/Templates";
-import UserLogin from "./pages/UserLogin";
 
 const queryClient = new QueryClient();
 
@@ -19,7 +18,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<UserLogin />} />
+          <Route path="/" element={<Templates />} />
           <Route path="/templates" element={<Templates />} />
           <Route path="/work" element={<Index />} />
           <Route path="/auth" element={<Auth />} />

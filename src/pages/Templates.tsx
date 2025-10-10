@@ -5,10 +5,23 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, FileText, Trash2, Download, Plus, LogOut } from "lucide-react";
+import { Upload, FileText, Trash2, Download, Plus, LogOut, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import legalIllustration from "@/assets/legal-illustration.png";
+
+const HARDCODED_USERNAME = "docs@babuadvocate.com";
+const HARDCODED_PASSWORD = "docs123";
+
+const loginSchema = z.object({
+  email: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required")
+});
 
 interface Template {
   id: string;
@@ -27,17 +40,29 @@ const Templates = () => {
   const [templateName, setTemplateName] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  const loginForm = useForm<z.infer<typeof loginSchema>>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: ""
+    }
+  });
 
   useEffect(() => {
     // Check if user is logged in
-    const isLoggedIn = localStorage.getItem("userLoggedIn");
-    if (!isLoggedIn) {
-      navigate("/");
-      return;
-    }
+    const loggedIn = localStorage.getItem("userLoggedIn") === "true";
+    setIsLoggedIn(loggedIn);
     
-    loadTemplates();
-  }, [navigate]);
+    if (loggedIn) {
+      loadTemplates();
+    } else {
+      setIsLoading(false);
+    }
+  }, []);
 
   const loadTemplates = async () => {
     try {
@@ -160,10 +185,124 @@ const Templates = () => {
     }
   };
 
+  const handleLogin = async (values: z.infer<typeof loginSchema>) => {
+    setIsLoggingIn(true);
+    
+    // Validate against hardcoded credentials
+    if (values.email === HARDCODED_USERNAME && values.password === HARDCODED_PASSWORD) {
+      // Store login state in localStorage
+      localStorage.setItem("userLoggedIn", "true");
+      setIsLoggedIn(true);
+      
+      toast.success("Logged in successfully");
+      loadTemplates();
+    } else {
+      toast.error("Invalid username or password");
+    }
+    
+    setIsLoggingIn(false);
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("userLoggedIn");
-    navigate("/");
+    setIsLoggedIn(false);
+    loginForm.reset();
   };
+
+  // If not logged in, show login form
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+        <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-center">
+          {/* Left side - Illustration */}
+          <div className="hidden lg:flex items-center justify-center">
+            <img 
+              src={legalIllustration} 
+              alt="Legal Document Management" 
+              className="w-full max-w-lg object-contain"
+            />
+          </div>
+
+          {/* Right side - Login Form */}
+          <div className="w-full max-w-md mx-auto">
+            <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-slate-700 to-slate-900 p-6 flex items-center justify-center">
+                <h1 className="text-xl font-semibold text-white">Admin Login</h1>
+              </div>
+
+              {/* Form Content */}
+              <div className="p-8">
+                <div className="text-center mb-8">
+                  <h2 className="text-3xl font-bold text-slate-800 mb-2">Welcome Back</h2>
+                  <p className="text-slate-600">Sign in to access templates</p>
+                </div>
+
+                <Form {...loginForm}>
+                  <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-6">
+                    <FormField 
+                      control={loginForm.control} 
+                      name="email" 
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-slate-700">Username</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="text" 
+                              placeholder="Enter your email"
+                              className="h-12 bg-slate-50 border-slate-200"
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} 
+                    />
+                    
+                    <FormField 
+                      control={loginForm.control} 
+                      name="password" 
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-slate-700">Password</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Input 
+                                type={showPassword ? "text" : "password"}
+                                placeholder="Enter your password"
+                                className="h-12 bg-slate-50 border-slate-200 pr-12"
+                                {...field} 
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                              >
+                                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                              </button>
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} 
+                    />
+                    
+                    <Button 
+                      type="submit" 
+                      className="w-full h-12 bg-gradient-to-r from-slate-700 to-slate-900 hover:from-slate-800 hover:to-slate-950 text-white font-semibold text-base"
+                      disabled={isLoggingIn}
+                    >
+                      {isLoggingIn ? "Signing in..." : "Sign In"}
+                    </Button>
+                  </form>
+                </Form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
